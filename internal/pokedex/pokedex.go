@@ -10,8 +10,12 @@ type PokedexEntry struct {
 }
 
 type Pokemon struct {
-	name           string     `json:"name"`
-	BaseExperience int        `json:"base_experience"`
+	Name           string     
+	BaseExperience int        
+	Height         int
+	Weight         int
+	Stats          map[string]int
+	Types           []string
 }
 
 func (p *Pokedex) Add(pmon Pokemon) (count int, isNew bool) {

@@ -37,7 +37,23 @@ type EncountersResponse struct {
 	} `json:"pokemon_encounters"`
 }
 
-
+type PokemonResponse struct {
+	Name           string  `json:"name"`
+	BaseExperience int     `json:"base_experience"`
+	Height         int     `json:"height"`
+	Weight         int     `json:"weight"`
+	Stats          []struct {
+		BaseStat int `json:"base_stat"`
+		Stat     struct{
+			Name string `json:"name"`
+		} `json:"stat"`
+	} `json:"stats"`
+	Types         []struct {
+		Type struct {
+			Name string `json:"name"`
+		} `json:"type"`
+	} `json:"types"`
+}
 
 func (c *Client) GetNextLocations() (LocationArea, error) {
 	url := "https://pokeapi.co/api/v2/location-area/"
@@ -90,10 +106,10 @@ func (c *Client) unmarshalEncounters(body []byte) (EncountersResponse, error) {
 	return encounters, nil
 }
 
-func (c *Client) unmarshalPokemon(body []byte) (pokedex.Pokemon, error) {
-	var pokemon pokedex.Pokemon
+func (c *Client) unmarshalPokemon(body []byte) (PokemonResponse, error) {
+	var pokemon PokemonResponse
 	if err := json.Unmarshal(body, &pokemon); err != nil {
-		return pokedex.Pokemon{}, fmt.Errorf("error unmarshaling data: %w", err)
+		return PokemonResponse{}, fmt.Errorf("error unmarshaling data: %w", err)
 	}
 
 	return pokemon, nil
@@ -124,6 +140,10 @@ func (c *Client) GetPokemon(name string) (pokedex.Pokemon, error) {
 	pokemon, err := c.unmarshalPokemon(body)
 
 	return pokemon, err
+}
+
+func transformPokemon(PokemonResponse) (pokedex.Pokemon, error) {
+	
 }
 
 func (c *Client) fetch(url string) ([]byte, error) {
