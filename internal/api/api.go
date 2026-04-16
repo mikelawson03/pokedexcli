@@ -1,11 +1,12 @@
 package api
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
+
 	"github.com/mikelawson03/pokedexcli/internal/pokecache"
 	"github.com/mikelawson03/pokedexcli/internal/pokedex"
 )
@@ -16,10 +17,10 @@ type Location struct {
 }
 
 type LocationArea struct {
-	Count    int         `json:"count"`
-	Next     *string      `json:"next"`
-	Previous *string      `json:"previous"`
-	Results  []Location  `json:"results"`
+	Count    int        `json:"count"`
+	Next     *string    `json:"next"`
+	Previous *string    `json:"previous"`
+	Results  []Location `json:"results"`
 }
 
 type Client struct {
@@ -38,17 +39,17 @@ type EncountersResponse struct {
 }
 
 type PokemonResponse struct {
-	Name           string  `json:"name"`
-	BaseExperience int     `json:"base_experience"`
-	Height         int     `json:"height"`
-	Weight         int     `json:"weight"`
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
 	Stats          []struct {
 		BaseStat int `json:"base_stat"`
-		Stat     struct{
+		Stat     struct {
 			Name string `json:"name"`
 		} `json:"stat"`
 	} `json:"stats"`
-	Types         []struct {
+	Types []struct {
 		Type struct {
 			Name string `json:"name"`
 		} `json:"type"`
@@ -57,7 +58,7 @@ type PokemonResponse struct {
 
 func (c *Client) GetNextLocations() (LocationArea, error) {
 	url := "https://pokeapi.co/api/v2/location-area/"
-	
+
 	if c.nextURL != nil {
 		url = *c.nextURL
 	}
@@ -71,7 +72,7 @@ func (c *Client) GetNextLocations() (LocationArea, error) {
 	return locations, err
 }
 
-func (c *Client) GetPreviousLocations() (LocationArea, error) {	
+func (c *Client) GetPreviousLocations() (LocationArea, error) {
 	if c.previousURL == nil {
 		return LocationArea{}, fmt.Errorf("you're on the first page")
 	}
@@ -100,7 +101,7 @@ func (c *Client) unmarshalLocation(body []byte) (LocationArea, error) {
 func (c *Client) unmarshalEncounters(body []byte) (EncountersResponse, error) {
 	var encounters EncountersResponse
 	if err := json.Unmarshal(body, &encounters); err != nil {
-		return EncountersResponse{}, fmt. Errorf("error unmarshaling data: %w", err)
+		return EncountersResponse{}, fmt.Errorf("error unmarshaling data: %w", err)
 	}
 
 	return encounters, nil
@@ -127,7 +128,7 @@ func (c *Client) GetEncounters(location string) (EncountersResponse, error) {
 	encounters, err := c.unmarshalEncounters(body)
 
 	return encounters, err
-	
+
 }
 
 func (c *Client) GetPokemon(name string) (pokedex.Pokemon, error) {
@@ -137,19 +138,40 @@ func (c *Client) GetPokemon(name string) (pokedex.Pokemon, error) {
 		return pokedex.Pokemon{}, err
 	}
 
-	pokemon, err := c.unmarshalPokemon(body)
+	resp, err := c.unmarshalPokemon(body)
+	if err != nil {
+		return pokedex.Pokemon{}, err
+	}
 
+	pokemon := transformPokemon(resp)
 	return pokemon, err
 }
 
-func transformPokemon(PokemonResponse) (pokedex.Pokemon, error) {
-	
+func transformPokemon(resp PokemonResponse) pokedex.Pokemon {
+	pokemon := pokedex.Pokemon{
+		Name:           resp.Name,
+		BaseExperience: resp.BaseExperience,
+		Height:         resp.Height,
+		Weight:         resp.Weight,
+		Stats:          make(map[string]int),
+		Types:          []string{},
+	}
+
+	for _, v := range resp.Stats {
+		pokemon.Stats[v.Stat.Name] = v.BaseStat
+	}
+
+	for _, v := range resp.Types {
+		pokemon.Types = append(pokemon.Types, v.Type.Name)
+	}
+
+	return pokemon
 }
 
 func (c *Client) fetch(url string) ([]byte, error) {
-	var body [] byte
+	var body []byte
 	cached, ok := c.cache.Get(url)
-	if ok{
+	if ok {
 		body = cached
 	} else {
 		res, err := http.Get(url)
@@ -157,8 +179,8 @@ func (c *Client) fetch(url string) ([]byte, error) {
 			return nil, fmt.Errorf("error making request: %w", err)
 		}
 		defer res.Body.Close()
-		
-		body, err = io.ReadAll(res.Body); 
+
+		body, err = io.ReadAll(res.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error reading HTTP response data: %w", err)
 		}
@@ -175,4 +197,3 @@ func NewClient(interval time.Duration) *Client {
 
 	return c
 }
-

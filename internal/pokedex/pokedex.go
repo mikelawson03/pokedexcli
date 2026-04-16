@@ -1,47 +1,46 @@
 package pokedex
 
 type Pokedex struct {
-	entry map[string]PokedexEntry
+	Entry map[string]PokedexEntry
 }
 
 type PokedexEntry struct {
-	pokemon     Pokemon
-	count       int
+	Pokemon Pokemon
+	Count   int
 }
 
 type Pokemon struct {
-	Name           string     
-	BaseExperience int        
+	Name           string
+	BaseExperience int
 	Height         int
 	Weight         int
 	Stats          map[string]int
-	Types           []string
+	Types          []string
 }
 
 func (p *Pokedex) Add(pmon Pokemon) (count int, isNew bool) {
 	isNew = false
-	name := pmon.name
-	entry, ok := p.entry[name]
+	name := pmon.Name
+	entry, ok := p.Entry[name]
 	if ok {
-		entry.count++
-		p.entry[name] = entry
+		entry.Count++
+		p.Entry[name] = entry
 	} else {
-		p.entry[name] = PokedexEntry{
-			pokemon: pmon,
-			count: 1,
+		p.Entry[name] = PokedexEntry{
+			Pokemon: pmon,
+			Count:   1,
 		}
 		isNew = true
 	}
 
-	count = p.entry[name].count
+	count = p.Entry[name].Count
 
 	return count, isNew
 }
 
 func NewPokedex() *Pokedex {
 	p := &Pokedex{
-		entry:     make(map[string]PokedexEntry),
+		Entry: make(map[string]PokedexEntry),
 	}
 	return p
 }
-

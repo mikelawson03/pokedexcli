@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+
 	"github.com/mikelawson03/pokedexcli/internal/api"
 	"github.com/mikelawson03/pokedexcli/internal/pokedex"
 )
@@ -24,35 +25,45 @@ var pdex = pokedex.NewPokedex()
 
 func init() {
 	commands = map[string]cliCommand{
-		"help" : {
+		"help": {
 			name:        "help",
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
-		"exit" : {
+		"exit": {
 			name:        "exit",
 			description: "Exit the Pokedex",
 			callback:    commandExit,
 		},
-		"map" : {
+		"map": {
 			name:        "map",
 			description: "Show next map location area",
 			callback:    commandMap,
 		},
-		"mapb" : {
+		"mapb": {
 			name:        "mapb",
 			description: "Show previous map location area",
 			callback:    commandMapb,
 		},
-		"explore" : {
+		"explore": {
 			name:        "explore",
 			description: "Show Pokemon in area. Syntax: 'explore <area-name>'",
 			callback:    commandExplore,
 		},
-		"catch" : {
+		"catch": {
 			name:        "catch",
 			description: "Catch a Pokemon. Syntax: 'catch <pokemon-name>'",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "View stats of caught Pokemon. Syntax: 'inspect <pokemon-name>'",
+			callback:    commandInspect,
+		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "View list of caught Pokemon",
+			callback:    commandPokedex,
 		},
 	}
 }
@@ -63,8 +74,8 @@ func startRepl() {
 	for {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
-		
-		words:= cleanInput(scanner.Text())
+
+		words := cleanInput(scanner.Text())
 		if len(words) == 0 {
 			continue
 		}
@@ -79,7 +90,7 @@ func startRepl() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		
+
 	}
 }
 
@@ -136,7 +147,7 @@ func commandExplore(args []string) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	for _, v :=range encounters.PokemonEncounters {
+	for _, v := range encounters.PokemonEncounters {
 		fmt.Println(v.Pokemon.Name)
 	}
 	return nil
@@ -155,23 +166,57 @@ func commandCatch(args []string) error {
 	fmt.Print(".")
 	time.Sleep(1 * time.Second)
 	fmt.Print(".\n")
-	
+
 	pokemon, err := client.GetPokemon(pokeName)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	exp := pokemon.BaseExperience
-	
+
 	if rand.Intn(650) >= exp {
-		fmt.Println(pokeName, " was caught!")
+		fmt.Println(pokeName, "was caught!")
 		count, isNew := pdex.Add(pokemon)
 		if isNew {
-			fmt.Println(pokeName, " has been added to your Pokedex!")
+			fmt.Println(pokeName, "has been added to your Pokedex!")
 		} else {
 			fmt.Printf("You caught another %s. You now have %d!\n", pokeName, count)
 		}
 		return nil
 	}
-	fmt.Println(pokeName, " escaped!")
+	fmt.Println(pokeName, "escaped!")
+	return nil
+}
+
+func commandInspect(args []string) error {
+	resp, ok := pdex.Entry[args[0]]
+	if !ok {
+		return fmt.Errorf("Pokemon %v not found", args[0])
+	}
+
+	pokemon := resp.Pokemon
+	fmt.Println("Name:", pokemon.Name)
+	fmt.Println("Height:", pokemon.Height)
+	fmt.Println("Weight:", pokemon.Weight)
+	fmt.Println("Stats:")
+	for k, v := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", k, v)
+	}
+	fmt.Println("Types:")
+	for _, t := range pokemon.Types {
+		fmt.Printf("  -%s\n", t)
+	}
+	return nil
+}
+
+func commandPokedex(args []string) error {
+	if len(pdex.Entry) == 0 {
+		return fmt.Errorf("Pokedex is empty. Go catch a Pokemon!")
+	}
+
+	fmt.Println("Pokemon (Qty)")
+	fmt.Println("-------------")
+	for k, v := range pdex.Entry {
+		fmt.Printf("%s (%d)\n", k, v.Count)
+	}
 	return nil
 }
